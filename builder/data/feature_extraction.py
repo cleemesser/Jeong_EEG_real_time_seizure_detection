@@ -30,6 +30,7 @@ def fractal_feature(signal, signal_samplerate, feature_samplerate):
     # feature samplerate must be smaller than signalsamplerate
     result = []
     a = int(signal_samplerate/float(feature_samplerate))
+    e = 0.00000001
     # endpoint = int(intv*math.floor(len(signal)/float(signal_samplerate)))
     for start_point in range(0, len(signal), signal_samplerate):
         # start_point = i*signal_samplerate
@@ -37,11 +38,11 @@ def fractal_feature(signal, signal_samplerate, feature_samplerate):
 
         for start_point in range(0, len(onesec_signal), a):
             one_signal = list(onesec_signal[start_point:start_point+a])
-            e = 0.00000001
             timeintv = 1/float(signal_samplerate)
             signalsize = len(one_signal)
             oldpoint = [0, 0]
-            time = 0; length = 0
+            time = 0
+            length = 0
 
             for k in range(signalsize):
                 time += timeintv
@@ -49,9 +50,7 @@ def fractal_feature(signal, signal_samplerate, feature_samplerate):
                 d = pdist([oldpoint, newpoint], metric='euclidean')
                 length += d
                 oldpoint = newpoint
-            Nprime = 1/(2*e)
-            
-            result.append(1 + math.log(length, 2)/math.log(2*Nprime, 2))
+            result.append(1 + math.log(length, 2) / math.log(2 * (1/(2*e)), 2))
     return np.asarray(result)
 
 
@@ -179,8 +178,7 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order):
     b2, a2 = butter_highpass(highcut, fs, order)
     temp2 = np.array(y)
     temp2 = temp2.astype(np.float)
-    y2 = filtfilt(b2, a2, temp2)
-    return y2
+    return filtfilt(b2, a2, temp2)
 
 
 ############################################## end of feature extraction ################################################
@@ -195,8 +193,8 @@ def preprocess_eeg_data(data_path, data_type):
         one_eeg = sample['DATA'][6]
         print("len of one_eeg: ", len(one_eeg))
         print("seconds of one_eeg: ", len(one_eeg)/256)
-        x_time = np.linspace(0, int(len(one_eeg)/256), len(one_eeg))
-        
+        x_time = np.linspace(0, len(one_eeg) // 256, len(one_eeg))
+
         one_fractal = fractal_feature(one_eeg, 256, 4)
         psds = power_spectral_density_feature(one_eeg, 256)
         freqs, times, spec = spectrogram_feature(one_eeg, 256)
@@ -206,7 +204,7 @@ def preprocess_eeg_data(data_path, data_type):
 
         plt.figure()
         plt.subplot(6, 1, 1)
-        plt.plot(x_time, one_eeg)        
+        plt.plot(x_time, one_eeg)
         plt.title('Original Signal (P3-REF)')
         plt.subplot(6, 1, 2)
         plt.plot(one_fractal)
@@ -224,41 +222,41 @@ def preprocess_eeg_data(data_path, data_type):
         plt.plot(hilbert3)
         plt.title("hilbert feature 3")
         plt.show()
-        
+
         plt.figure()
         plt.subplot(11, 1, 1)
-        plt.plot(x_time, one_eeg)      
-        plt.title('Original Signal (P3-REF)')  
+        plt.plot(x_time, one_eeg)
+        plt.title('Original Signal (P3-REF)')
         plt.subplot(11, 1, 2)
         plt.plot(psds[0])
-        plt.title('PSD 0~4 Hz feature')  
+        plt.title('PSD 0~4 Hz feature')
         plt.subplot(11, 1, 3)
         plt.plot(psds[1])
-        plt.title('PSD 4~7 Hz feature')  
+        plt.title('PSD 4~7 Hz feature')
         plt.subplot(11, 1, 4)
         plt.plot(psds[2])
-        plt.title('PSD 7~13 Hz feature')  
+        plt.title('PSD 7~13 Hz feature')
         plt.subplot(11, 1, 5)
         plt.plot(psds[3])
-        plt.title('PSD 13~15 Hz feature')  
+        plt.title('PSD 13~15 Hz feature')
         plt.subplot(11, 1, 6)
         plt.plot(psds[4])
-        plt.title('PSD 15~30 Hz feature')  
+        plt.title('PSD 15~30 Hz feature')
         plt.subplot(11, 1, 7)
         plt.plot(psds[5])
-        plt.title('PSD 30~45 Hz feature')  
+        plt.title('PSD 30~45 Hz feature')
         plt.subplot(11, 1, 8)
         plt.plot(psds[6])
-        plt.title('PSD 45~60 Hz feature')  
+        plt.title('PSD 45~60 Hz feature')
         plt.subplot(11, 1, 9)
         plt.plot(psds[7])
-        plt.title('PSD 60~75 Hz feature')  
+        plt.title('PSD 60~75 Hz feature')
         plt.subplot(11, 1, 10)
         plt.plot(psds[8])
-        plt.title('PSD 75~97 Hz feature')  
+        plt.title('PSD 75~97 Hz feature')
         plt.subplot(11, 1, 11)
         plt.plot(psds[9])
-        plt.title('PSD 97~128 Hz feature')  
+        plt.title('PSD 97~128 Hz feature')
         plt.show()
 
 

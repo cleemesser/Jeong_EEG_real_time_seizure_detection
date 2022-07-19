@@ -39,7 +39,7 @@ class SPECTROGRAM_FEATURE_HYPEROPT(nn.Module):
         # self.freq_max_div = self.freq_max // self.freq_group_len 
         self.final_batch = []
 
-        assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin'
+        assert platform.system().lower() in ['linux', 'darwin']
         import torchaudio
 
         self.transforms = torchaudio.transforms.Spectrogram(n_fft=self.freq_resolution*self.sample_rate,
@@ -59,7 +59,7 @@ class SPECTROGRAM_FEATURE_HYPEROPT(nn.Module):
         win_shift = self.target_shift
         target_list = []
         num_intvs = int(targets.size(0) // self.target_shift) + 1
-        for idx in range(0, num_intvs):
+        for idx in range(num_intvs):
             index = int(self.target_shift * idx)
             seiz_count = torch.count_nonzero(targets[index:index+win_size], dim=0)
             if seiz_count < self.seiz_requirement_pts:

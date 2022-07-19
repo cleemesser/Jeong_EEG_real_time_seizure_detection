@@ -5,10 +5,11 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 
 def get_detector_model(args):
 
-    model_module = importlib.import_module("builder.models.detector_models." + args.model)
-    model = getattr(model_module, args.model.upper())
+    model_module = importlib.import_module(
+        f"builder.models.detector_models.{args.model}"
+    )
 
-    return model
+    return getattr(model_module, args.model.upper())
 
 
 def grad_cam(args, model, data):

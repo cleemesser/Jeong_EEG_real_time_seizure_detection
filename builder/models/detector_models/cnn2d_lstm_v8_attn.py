@@ -20,7 +20,7 @@ from builder.models.feature_extractor.sincnet_feature import SINCNET_FEATURE
 
 class CNN2D_LSTM_V8_ATTN(nn.Module):
         def __init__(self, args, device):
-                super(CNN2D_LSTM_V8_ATTN, self).__init__()      
+                super(CNN2D_LSTM_V8_ATTN, self).__init__()
                 self.args = args
 
                 self.num_layers = args.num_layers
@@ -28,11 +28,9 @@ class CNN2D_LSTM_V8_ATTN(nn.Module):
                 self.dropout = args.dropout
                 self.num_data_channel = args.num_channel
                 self.sincnet_bandnum = args.sincnet_bandnum
-                
+
                 self.feature_extractor = args.enc_model
-                if self.feature_extractor == "raw":
-                        pass
-                else:
+                if self.feature_extractor != "raw":
                         self.feat_models = nn.ModuleDict([
                                 ['psd1', PSD_FEATURE1()],
                                 ['psd2', PSD_FEATURE2()],
@@ -43,7 +41,7 @@ class CNN2D_LSTM_V8_ATTN(nn.Module):
                                                         ]])
                         self.feat_model = self.feat_models[self.feature_extractor]
 
-                if args.enc_model == "psd1" or args.enc_model == "psd2":
+                if args.enc_model in ["psd1", "psd2"]:
                         self.feature_num = 7
                 elif args.enc_model == "sincnet":
                         self.feature_num = args.cnn_channel_sizes[args.sincnet_layer_num-1]
@@ -54,7 +52,7 @@ class CNN2D_LSTM_V8_ATTN(nn.Module):
                 elif args.enc_model == "raw":
                         self.feature_num = 1
                         self.num_data_channel = 1
-                
+
                 activation = 'relu'
                 self.activations = nn.ModuleDict([
                         ['lrelu', nn.LeakyReLU()],
@@ -76,7 +74,7 @@ class CNN2D_LSTM_V8_ATTN(nn.Module):
                                 self.activations[activation],
                                 nn.Dropout(self.dropout),
                 )
-                
+
                 if args.enc_model == "raw":
                         self.features = nn.Sequential(
                                 conv2d_bn(self.num_data_channel,  64, (1,51), (1,4), (0,25)), 
@@ -91,7 +89,7 @@ class CNN2D_LSTM_V8_ATTN(nn.Module):
                                 nn.MaxPool2d(kernel_size=(1,4), stride=(1,4)),
                                 conv2d_bn(128, 256, (1,9), (1,2), (0,4)),
                         )
-                elif args.enc_model == "psd1" or args.enc_model == "psd2":
+                elif args.enc_model in ["psd1", "psd2"]:
                         self.features = nn.Sequential(
                                 conv2d_bn(1,  64, (7,21), (7,2), (0,10)), 
                                 conv2d_bn(64, 128, (1,21), (1,2), (0,10)),
@@ -135,7 +133,7 @@ class CNN2D_LSTM_V8_ATTN(nn.Module):
 
                 x_all = self.all_agvpool(x).squeeze(2).permute(0,2,1)
                 x_1 = self.agvpool1(x).squeeze(3)
-                self.hidden = tuple(([Variable(var.data) for var in self.hidden]))
+                self.hidden = tuple(Variable(var.data) for var in self.hidden)
                 attn1 = torch.bmm(self.hidden[0][0].unsqueeze(1), x_1)
                 attn2 = torch.bmm(self.hidden[0][1].unsqueeze(1), x_1)
                 _ , self.hidden = self.lstm(x_all, self.hidden)    

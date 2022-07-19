@@ -31,29 +31,28 @@ from builder.utils.utils import *
 
 
 def bipolar_signals_func(signals):
-    bipolar_signals = []
-    bipolar_signals.append(signals[0]-signals[4]) #fp1-f7
-    bipolar_signals.append(signals[1]-signals[5]) #fp2-f8
-    bipolar_signals.append(signals[4]-signals[9]) #f7-t3
-    bipolar_signals.append(signals[5]-signals[10]) #f8-t4
-    bipolar_signals.append(signals[9]-signals[15]) #t3-t5
-    bipolar_signals.append(signals[10]-signals[16]) #t4-t6
-    bipolar_signals.append(signals[15]-signals[13]) #t5-o1
-    bipolar_signals.append(signals[16]-signals[14]) #t6-o2
-    bipolar_signals.append(signals[9]-signals[6]) #t3-c3
-    bipolar_signals.append(signals[7]-signals[10]) #c4-t4
-    bipolar_signals.append(signals[6]-signals[8]) #c3-cz
-    bipolar_signals.append(signals[8]-signals[7]) #cz-c4
-    bipolar_signals.append(signals[0]-signals[2]) #fp1-f3
-    bipolar_signals.append(signals[1]-signals[3]) #fp2-f4
-    bipolar_signals.append(signals[2]-signals[6]) #f3-c3
-    bipolar_signals.append(signals[3]-signals[7]) #f4-c4
-    bipolar_signals.append(signals[6]-signals[11]) #c3-p3
-    bipolar_signals.append(signals[7]-signals[12]) #c4-p4
-    bipolar_signals.append(signals[11]-signals[13]) #p3-o1
-    bipolar_signals.append(signals[12]-signals[14]) #p4-o2
-
-    return bipolar_signals
+    return [
+        signals[0] - signals[4],
+        signals[1] - signals[5],
+        signals[4] - signals[9],
+        signals[5] - signals[10],
+        signals[9] - signals[15],
+        signals[10] - signals[16],
+        signals[15] - signals[13],
+        signals[16] - signals[14],
+        signals[9] - signals[6],
+        signals[7] - signals[10],
+        signals[6] - signals[8],
+        signals[8] - signals[7],
+        signals[0] - signals[2],
+        signals[1] - signals[3],
+        signals[2] - signals[6],
+        signals[3] - signals[7],
+        signals[6] - signals[11],
+        signals[7] - signals[12],
+        signals[11] - signals[13],
+        signals[12] - signals[14],
+    ]
 
 
 def eeg_binary_collate_fn(train_data):
@@ -71,16 +70,13 @@ def eeg_binary_collate_fn(train_data):
             data_pkl = pkl.load(_f)
             signals = data_pkl['RAW_DATA'][0]
             y = data_pkl[args.label_group][0]
-     
+
             if args.eeg_type == "bipolar":
                 bipolar_signals = bipolar_signals_func(signals)
                 signals = torch.stack(bipolar_signals)
             elif args.eeg_type == "uni_bipolar":
                 bipolar_signals = bipolar_signals_func(signals)
                 signals = torch.cat((signals, torch.stack(bipolar_signals)))
-            else:
-                pass #unipolar
-
             batch.append((signals, y, input_seiz.split("/")[-1].split(".")[0]))
     pad_id = 0
     # batch = sorted(batch, key=lambda sample: sample[0][0].size(0), reverse=True)
@@ -139,15 +135,13 @@ class Detector_Dataset(torch.utils.data.Dataset):
         self._type_detail1 = []
         self._type_detail2 = []
         self.type_type = []
-        num_normals = 0
-        num_seizures_boundaries = 0
-        num_seizures_middles = 0
         patient_dev_dict = {}
-        for idx, pkl in enumerate(tqdm(data_pkls, desc="Loading edf files of {}".format(data_type))):
+        for pkl in tqdm(data_pkls, desc=f"Loading edf files of {data_type}"):
             type1, type2 = pkl.split("_")[-2:]
-            if type1 == "8":
-                if args.output_dim == 8 or args.binary_sampler_type == "30types":
-                    continue
+            if type1 == "8" and (
+                args.output_dim == 8 or args.binary_sampler_type == "30types"
+            ):
+                continue
             if args.binary_sampler_type == "6types":
                 label = pkl.split("_")[-1].split(".")[0]
             elif args.binary_sampler_type == "30types":
@@ -156,13 +150,13 @@ class Detector_Dataset(torch.utils.data.Dataset):
                 print("Error! select correct binary data type...")
                 exit(1)
 
-            if "training dataset" != data_type:
+            if data_type != "training dataset":
                 # if "middle" in pkl:
                 #     continue
                 pat_id = (pkl.split("/")[-1]).split("_")[0]
                 if pat_id not in patient_dev_dict:
                     patient_dev_dict[pat_id] = [0, 0, 0] # normal, seizure, seiz_middle
-                
+
                 if (type1 == "0") and (patient_dev_dict[pat_id][0] >= args.dev_bckg_num):
                     continue
                 if (type1 != "0") and (patient_dev_dict[pat_id][2] >= args.dev_bckg_num):
@@ -181,9 +175,9 @@ class Detector_Dataset(torch.utils.data.Dataset):
             self._type_detail2.append(type1)
             self._type_list.append(self.type_type.index(label))
             self._data_list.append(pkl)
-            
-        print("########## Summary of {} ##########".format(data_type))    
-        print("Types of types for sampler: ", self.type_type)  
+
+        print(f"########## Summary of {data_type} ##########")
+        print("Types of types for sampler: ", self.type_type)
         print("Number of types for sampler: ", len(self.type_type))
         print("--- Normal Slices Info ---")
         print("Patient normal slices size: ", self._type_detail1.count("0_patT"))
@@ -191,28 +185,39 @@ class Detector_Dataset(torch.utils.data.Dataset):
         print("Total normal slices size: ", self._type_detail2.count("0"))
         print("--- Seizure Slices Info ---")
         total_seiz_slices_num = 0
-        for idx, seizure in enumerate(args.seiz_classes):
-            seiz_num = args.seizure_to_num[seizure] 
+        for seizure in args.seiz_classes:
+            seiz_num = args.seizure_to_num[seizure]
             beg_slice_num = self._type_detail1.count(seiz_num + "_beg")
             middle_slice_num = self._type_detail1.count(seiz_num + "_middle")
             end_slice_num = self._type_detail1.count(seiz_num + "_end")
             whole_slice_num = self._type_detail1.count(seiz_num + "_whole")
             total_seiz_num = self._type_detail2.count(seiz_num)
             total_seiz_slices_num += total_seiz_num
-            print("Number of {} slices: total:{} - beg:{}, middle:{}, end:{}, whole:{}".format(seizure, str(total_seiz_num), str(beg_slice_num), str(middle_slice_num), str(end_slice_num), str(whole_slice_num)))
-        print("Total seizure slices: ", str(total_seiz_slices_num))
+            print(
+                f"Number of {seizure} slices: total:{total_seiz_num} - beg:{beg_slice_num}, middle:{middle_slice_num}, end:{end_slice_num}, whole:{whole_slice_num}"
+            )
+
+        print("Total seizure slices: ", total_seiz_slices_num)
         print("Dataset Prepared...\n")
-        
-        if "training dataset" != data_type:
+
+        if data_type != "training dataset":
             print("Number of patients: ", len(patient_dev_dict))
+            num_normals = 0
+            num_seizures_boundaries = 0
+            num_seizures_middles = 0
             for pat_info in patient_dev_dict:
                 pat_normal, pat_seiz, pat_middle = patient_dev_dict[pat_info]
-                print("(Non-)Patient: {} has normals:{}, seizures:{}, mid_seizures:{}".format(pat_info, str(pat_normal), str(pat_seiz), str(pat_middle)))
+                print(
+                    f"(Non-)Patient: {pat_info} has normals:{str(pat_normal)}, seizures:{str(pat_seiz)}, mid_seizures:{str(pat_middle)}"
+                )
+
                 num_normals += pat_normal
                 num_seizures_boundaries += pat_seiz
                 num_seizures_middles += pat_middle
-            
-            print("Total normals:{}, seizures with boundaries:{}, seizures with middles:{}".format(str(num_normals), str(num_seizures_boundaries), str(num_seizures_middles)))
+
+            print(
+                f"Total normals:{str(num_normals)}, seizures with boundaries:{str(num_seizures_boundaries)}, seizures with middles:{str(num_seizures_middles)}"
+            )
 
     def __repr__(self):
         return (f"Data path: {self._data_pkl}")
@@ -221,8 +226,7 @@ class Detector_Dataset(torch.utils.data.Dataset):
         return len(self._data_list)
 
     def __getitem__(self, index):
-        _input = self._data_list[index]
-        return _input
+        return self._data_list[index]
 
 
 def get_data_preprocessed(args, mode="train"):
@@ -290,7 +294,7 @@ def get_data_preprocessed(args, mode="train"):
     #     test_dir += test_dict[i][2]
 
     half_dev_num = int(len(dev_dir) // 2)
-    val_dir = dev_dir[:half_dev_num] 
+    val_dir = dev_dir[:half_dev_num]
     test_dir = dev_dir[half_dev_num:]
     aug_val = ["0"] * len(val_dir)
     aug_test = ["0"] * len(test_dir)
@@ -327,9 +331,9 @@ def get_data_preprocessed(args, mode="train"):
     test_data = Detector_Dataset(args, data_pkls=test_dir, augment=aug_test, data_type="test dataset")
 
     train_loader = DataLoader(train_data, batch_size=args.batch_size, drop_last=True,
-                    num_workers=1, pin_memory=True, sampler=sampler, collate_fn=eeg_binary_collate_fn)     
+                    num_workers=1, pin_memory=True, sampler=sampler, collate_fn=eeg_binary_collate_fn)
     val_loader = DataLoader(val_data, batch_size=args.batch_size, drop_last=True,
-                    num_workers=1, pin_memory=True, collate_fn=eeg_binary_collate_fn)               
+                    num_workers=1, pin_memory=True, collate_fn=eeg_binary_collate_fn)
     test_loader = DataLoader(test_data, batch_size=args.batch_size, drop_last=True,
                     num_workers=1, pin_memory=True, collate_fn=eeg_binary_collate_fn)  
 
@@ -340,20 +344,20 @@ def get_data_preprocessed(args, mode="train"):
 
         args.disease_labels = data_info["disease_labels"]
         args.disease_labels_inv = data_info["disease_labels_inv"]
-        
+
         args.sample_rate = data_info["sample_rate"]
         args.feature_sample_rate = data_info["feature_sample_rate"]
-        
+
         args.disease_type = data_info["disease_type"]
 
         args.target_dictionary = data_info["target_dictionary"]
         args.selected_diseases = data_info["selected_diseases"]
-        
+
         args.window_size_label = args.feature_sample_rate * args.window_size
         args.window_shift_label = args.feature_sample_rate * args.window_shift
         args.window_size_sig = args.sample_rate * args.window_size
         args.window_shift_sig = args.sample_rate * args.window_shift
-        
+
         args.fsr_sr_ratio = (args.sample_rate // args.feature_sample_rate)
 
 
@@ -367,7 +371,7 @@ def get_data_preprocessed(args, mode="train"):
         args.num_channel = 20 + signals.size(0)
     else:
         args.num_channel = signals.size(0)
-    
+
     ############################################################
     print("Number of training data: ", len(train_dir))
     print("Number of validation data: ", len(val_dir))
@@ -377,10 +381,10 @@ def get_data_preprocessed(args, mode="train"):
     if args.task_type == "binary":
         print("Selected binary group is: ", args.num_to_seizure)
         print("Selected sampler type: ", args.binary_sampler_type)
-        print("Max number of normal slices per patient: ", str(args.dev_bckg_num))
+        print("Max number of normal slices per patient: ", args.dev_bckg_num)
     print("label_sample_rate: ", args.feature_sample_rate)
     print("raw signal sample_rate: ", args.sample_rate)
     print("Augmentation: ", args.augmentation)     
-    
+
     return train_loader, val_loader, test_loader, len(train_data._data_list), len(val_data._data_list), len(test_data._data_list)
 

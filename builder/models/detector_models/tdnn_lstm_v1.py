@@ -57,7 +57,10 @@ class TDNN(nn.Module):
         '''
 
         _, _, d = x.shape
-        assert (d == self.input_dim), 'Input dimension was wrong. Expected ({}), got ({})'.format(self.input_dim, d)
+        assert (
+            d == self.input_dim
+        ), f'Input dimension was wrong. Expected ({self.input_dim}), got ({d})'
+
         x = x.unsqueeze(1)
 
         # Unfold input into smaller temporal contexts
@@ -72,7 +75,7 @@ class TDNN(nn.Module):
         x = x.transpose(1,2)
         x = self.kernel(x)
         # x = self.nonlinearity(x)
-        
+
         if self.dropout_p:
             x = self.drop(x)
 
@@ -97,7 +100,7 @@ class TDNN_LSTM_V1(nn.Module):
         self.num_data_channel = self.args.num_channel
         self.tdnn_input_dim = self.args.sincnet_bandnum
         self.sincnet_bandnum = args.sincnet_bandnum
-                
+
         self.feature_extractor = nn.ModuleDict([
                                 ['psd1', PSD_FEATURE1()],
                                 ['psd2', PSD_FEATURE2()],
@@ -117,14 +120,14 @@ class TDNN_LSTM_V1(nn.Module):
         self.conv1dconcat_len = self.feature_num * self.num_data_channel
         self.D = self.feature_num
         activation = 'relu'
-        
+
         self.activations = nn.ModuleDict([
                         ['lrelu', nn.LeakyReLU()],
                         ['prelu', nn.PReLU()],
                         ['relu', nn.ReLU(inplace=True)]
         ])
-        
-        
+
+
 
         self.frame1 = TDNN(input_dim=self.tdnn_input_dim, output_dim=256, context_size=2, dilation=1)
         self.frame2 = TDNN(input_dim=256, output_dim=256, context_size=4, dilation=2)
@@ -139,7 +142,7 @@ class TDNN_LSTM_V1(nn.Module):
                         batch_first=True,
                         dropout=0.1,
                         proj_size=0) 
-       
+
         self.classifier = nn.Sequential(
                         nn.Linear(in_features=128, out_features=32, bias=True),
                         nn.Sigmoid(),
@@ -148,21 +151,21 @@ class TDNN_LSTM_V1(nn.Module):
                         nn.Sigmoid(),
                         nn.Linear(in_features=32, out_features= args.output_dim, bias=True)
                 )
-        
+
         self.hidden = ((torch.zeros(2, self.args.batch_size, 128).to(device),
                 torch.zeros(2, self.args.batch_size, 128).to(device)))
 
     def forward(self, x):
         x = x.permute(0, 2, 1)
         x = self.feat_model(x) 
-  
+
 
         # Start first stack
         x_temp = x[:,0,:,:].permute(0,2,1)
         out = self.frame1(x_temp)
         out = self.frame2(out)
         out = self.frame3(out)
-        out = self.avgpool(out.permute(0,2,1)) 
+        out = self.avgpool(out.permute(0,2,1))
         # Compute TDNN layers for each channel
         # for channel in range(1,self.num_data_channel):
         for channel in range(1, self.num_data_channel):
@@ -173,7 +176,7 @@ class TDNN_LSTM_V1(nn.Module):
             x_tdnn = self.avgpool(x_tdnn.permute(0,2,1))
             out = torch.cat((out, x_tdnn), dim=2)
         out = out.permute(0,2,1)
-        hidden1 = tuple(([Variable(var.data) for var in self.hidden]))
+        hidden1 = tuple(Variable(var.data) for var in self.hidden)
         out, hidden1 = self.lstm1(out, hidden1)
         out = out[:,-1,:]
         logit = self.classifier(out)

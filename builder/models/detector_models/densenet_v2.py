@@ -31,7 +31,7 @@ class Bottleneck(nn.Module):
     def __init__(self, nChannels, growthRate, is_psd):
         super(Bottleneck, self).__init__()
         interChannels = 4*growthRate
-        
+
         if is_psd:
             self.net = nn.Sequential(
             nn.BatchNorm2d(nChannels),
@@ -127,13 +127,13 @@ class DENSENET_V2(nn.Module):
 
         nChannels = 2*self.growthRate
 
-        self.is_psd = False 
+        self.is_psd = False
         if self.enc_model == 'raw':
             self.features = False
             self.conv1 = nn.Conv2d(1, nChannels, kernel_size=7, stride=(1,7), padding=2, bias=False)
         else:
             self.features = True
-            if self.enc_model == 'psd1' or self.enc_model =='psd2':
+            if self.enc_model in ['psd1', 'psd2']:
                 self.is_psd = True
                 self.conv1 = nn.Conv2d(self.num_data_channel, nChannels, kernel_size=(1,11), stride=(1,2), padding=(0,5),
                                bias=False)
@@ -177,7 +177,7 @@ class DENSENET_V2(nn.Module):
 
     def _make_dense(self, nChannels, growthRate, nDenseBlocks, bottleneck, is_psd):
         layers = []
-        for i in range(int(nDenseBlocks)):
+        for _ in range(int(nDenseBlocks)):
             if bottleneck:
                 layers.append(Bottleneck(nChannels, growthRate, is_psd))
             else:

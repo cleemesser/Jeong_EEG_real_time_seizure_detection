@@ -28,7 +28,7 @@ def plot_eeg_similarity_map(mma, sample, n_head):
     sample = sample.permute(1,0)
     # plot_head_map(att_map[0].cpu().data.numpy(), label, label)
     label = ["fp1-f7", "fp2-f8", "f7-t3", "f8-t4", "t3-t5", "t4-t6", "t5-o1", "t6-o2", "t3-c3", "c4-t4", "c3-cz", "cz-c4", "fp1-f3", "fp2-f4", "f3-c3", "f4-c4", "c3-p3", "c4-p4", "p3-o1", "p4-o2"]
-    
+
     plt.figure()
     for idx, label_name in enumerate(label):
         plt.subplot(20,1,idx+1)
@@ -63,7 +63,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
 
     answer_list = []
     prediction_list = []
-    
+
     requirement_target1 = args.window_shift_label//2
     requirement_target2 = args.window_size_label//4
 
@@ -78,7 +78,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
     model.init_state(device)
     shift_num = math.ceil((train_y.shape[0]-args.window_size_label)/float(args.window_shift_label))
 
-    if (args.enc_model == "sincnet") or (args.enc_model == "lfcc"):
+    if args.enc_model in ["sincnet", "lfcc"]:
         shift_start = 1
         shift_num -= 1
     else:
@@ -91,18 +91,18 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
         # seq_over = torch.ge(target_lengths_tensor, ((torch.tensor([y_idx+args.window_size_label-1])).repeat(args.batch_size)))
         # loss_zeros = torch.zeros(args.batch_size)
 
-        if args.enc_model == "sincnet":
-            slice_start = x_idx - sincnet_extrawinsize
-            slice_end = x_idx + args.window_size_sig + sincnet_extrawinsize
-
-        elif args.enc_model == "lfcc":
+        if args.enc_model == "lfcc":
             slice_start = x_idx - args.window_shift_sig
             slice_end = x_idx + (2 * args.window_size_sig)
+
+        elif args.enc_model == "sincnet":
+            slice_start = x_idx - sincnet_extrawinsize
+            slice_end = x_idx + args.window_size_sig + sincnet_extrawinsize
 
         else:
             slice_start = x_idx
             slice_end = x_idx+args.window_size_sig
-        
+
         seq_slice = train_x[slice_start:slice_end].permute(1, 0, 2)
         # print("seq_slice: ", seq_slice[:,1,:10])
         train_y = train_y.type(torch.FloatTensor)
@@ -123,7 +123,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
         # print("maps: ", maps)
         # exit(1)
         logits = logits.type(torch.FloatTensor)
-        
+
         if flow_type == "train":
             loss = criterion(logits, final_target)
             if args.loss_decision == "max_division":
@@ -133,7 +133,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
             else:
                 print("Error! Select Correct args.loss_decision...")
                 exit(1)
-            
+
             iter_loss.append(loss.item())
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 5)
@@ -142,7 +142,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
             logger.log_lr(scheduler.get_lr()[0], iteration)
 
         else:
-            
+
             if args.localization: 
                 focal_list = ["2"]
                 target_localization_list = [pat_idx for pat_idx, pat_info in enumerate(signal_name_list) if pat_info.split("_")[-2] in focal_list]
@@ -159,7 +159,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
             if args.calibration:
                 model.temperature_scaling.collect_logits(logits)
                 model.temperature_scaling.collect_labels(final_target)
-                
+
             proba = nn.functional.softmax(logits, dim=1)
             if args.batch_size == 1:
                 logger.pred_results.append(proba[0])
@@ -182,10 +182,7 @@ def sliding_window_v1(args, iteration, train_x, train_y, seq_lengths, target_len
                 probability = proba[:, 1]
                 logger.evaluator.probability_list.append(probability)
                 logger.evaluator.final_target_list.append(final_target)
-    
-    if flow_type == "train":    
-        return model, iter_loss
-    else:
-        return model, val_loss
+
+    return (model, iter_loss) if flow_type == "train" else (model, val_loss)
 
 

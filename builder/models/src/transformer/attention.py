@@ -79,10 +79,7 @@ class ScaledDotProductAttention(nn.Module):
     """
     def __init__(self, dim: int, scale: bool = True, block_mask: list = None) -> None:
         super(ScaledDotProductAttention, self).__init__()
-        if scale:
-            self.sqrt_dim = np.sqrt(dim)
-        else:
-            self.sqrt_dim = 1
+        self.sqrt_dim = np.sqrt(dim) if scale else 1
         self.block_mask = block_mask
 
         if self.block_mask is not None:
@@ -105,7 +102,7 @@ class ScaledDotProductAttention(nn.Module):
         if self.block_mask is not None:
             attn = attn * self.block_mask
             context = self.gamma * torch.bmm(attn, value)
-            
+
         else:
             context = torch.bmm(attn, value)
         return context, attn
@@ -142,7 +139,7 @@ class MultiHeadAttention(nn.Module):
 
         assert dim % num_heads == 0, "hidden_dim % num_heads should be zero."
 
-        self.d_head = int(dim / num_heads)
+        self.d_head = dim // num_heads
         self.num_heads = num_heads
         self.query_proj = Linear(dim, self.d_head * num_heads)
         self.key_proj = Linear(dim, self.d_head * num_heads)
@@ -201,7 +198,7 @@ class RelativeMultiHeadAttention(nn.Module):
         assert dim % num_heads == 0, "d_model % num_heads should be zero."
 
         self.dim = dim
-        self.d_head = int(dim / num_heads)
+        self.d_head = dim // num_heads
         self.num_heads = num_heads
         self.sqrt_dim = math.sqrt(dim)
 

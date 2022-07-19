@@ -31,7 +31,7 @@ class BasicBlock(nn.Module):
                 nn.ReLU(),
                 nn.Conv2d(planes, planes, kernel_size=(1,7), stride=(1,1), padding=(0,3), bias=False),
                 nn.BatchNorm2d(planes)
-                
+
             )
         else:
             self.net = nn.Sequential(
@@ -122,17 +122,16 @@ class RESNET18_CONV2D_V1(nn.Module):
         self.features = True
         self.is_psd = False
 
-        if self.enc_model == 'psd1' or self.enc_model == 'psd2':
+        if self.enc_model in ['psd1', 'psd2']:
             self.is_psd = True
             self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=(1,15), stride=(1,2), padding=(0,7), bias=False)
+        elif self.enc_model == 'raw':
+            self.features = False
+            self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=7, stride=(1,3), padding=3, bias=False)
+        elif self.enc_model == 'sincnet':
+            self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=7, stride=(1,2), padding=3, bias=False)
         else:
-            if self.enc_model == 'raw':
-                self.features = False
-                self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=7, stride=(1,3), padding=3, bias=False)
-            elif self.enc_model == 'sincnet':
-                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=7, stride=(1,2), padding=3, bias=False)
-            else:
-                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
+            self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
 
         # self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
         #                        stride=1, padding=1, bias=False)

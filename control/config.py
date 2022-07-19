@@ -50,7 +50,7 @@ parser.add_argument('--requirement-target', type=int, default=None, help='unit i
 
 # Augment Option: --augmentation = augmentation right on raw-signal data, --spec-augmentation = augmentation after PSD feature
 parser.add_argument('--spec-augmentation', type=bool, default=False)
-parser.add_argument('--freq-mask-para', type=int, default=2) 
+parser.add_argument('--freq-mask-para', type=int, default=2)
 parser.add_argument('--time-mask-num', type=int, default=10)
 parser.add_argument('--freq-mask-num', type=int, default=1)
 
@@ -145,19 +145,19 @@ elif args.task_type == "multiclassification":
     args.label_group = "LABEL"
     args.output_dim = len(args.seiz_num)
 
-elif args.task_type == "binary" or args.task_type == "binary_noslice":
+elif args.task_type in ["binary", "binary_noslice"]:
     # args.seiz_classes = ['gnsz', 'fnsz', 'spsz', 'cpsz', 'absz', 'tnsz', 'tcsz', 'mysz']
     args.seiz_classes = ['gnsz', 'fnsz', 'spsz', 'cpsz', 'absz', 'tnsz', 'tcsz']
     # args.seizure_to_num = {'gnsz':'1', 'fnsz':'2', 'spsz':'3', 'cpsz':'4', 'absz':'5', 'tnsz':'6', 'tcsz':'7', 'mysz':'8'}
     args.seizure_to_num = {'gnsz':'1', 'fnsz':'2', 'spsz':'3', 'cpsz':'4', 'absz':'5', 'tnsz':'6', 'tcsz':'7'}
     # args.seizure_to_num_inv = {'1':'gnsz', '2':'fnsz', '3':'spsz', '4':'cpsz', '5':'absz', '6':'tnsz', '7':'tcsz', '8':'mysz'}
     args.seizure_to_num_inv = {'1':'gnsz', '2':'fnsz', '3':'spsz', '4':'cpsz', '5':'absz', '6':'tnsz', '7':'tcsz'}
-    
+
     if args.binary_target_groups == 1:
         args.label_group = "LABEL1"
         args.output_dim = 8
         args.num_to_seizure = {'1':'gnsz', '2':'fnsz', '3':'spsz', '4':'cpsz', '5':'absz', '6':'tnsz', '7':'tcsz'}
-    
+
     elif args.binary_target_groups == 2:
         args.label_group = "LABEL2"
         args.output_dim = 2
@@ -170,7 +170,7 @@ elif args.task_type == "binary" or args.task_type == "binary_noslice":
         args.num_to_seizure = {'1':'gnsz_absz', '2':'fnsz_spsz_cpsz', '3':'tnsz', '4':'tcsz', '5':'mysz'}
     else:
         print("Select Correct disease target group...")
-        exit(1) 
+        exit(1)
 else:
     print("Select Correct disease target group...")
     exit(1)

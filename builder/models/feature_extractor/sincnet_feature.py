@@ -75,11 +75,11 @@ class SincConv_fast(nn.Module):
 
         self.out_channels = out_channels
         self.kernel_size = kernel_size
-        
+
         # Forcing the filters to be odd (i.e, perfectly symmetrics)
         if kernel_size%2==0:
             self.kernel_size=self.kernel_size+1
-            
+
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -101,7 +101,7 @@ class SincConv_fast(nn.Module):
                           self.to_mel(high_hz),
                           self.out_channels + 1)
         hz = self.to_hz(mel)
-        
+
 
         # filter lower frequency (out_channels, 1)
         self.low_hz_ = nn.Parameter(torch.Tensor(hz[:-1]).view(-1, 1))
@@ -192,7 +192,7 @@ class sincnet_conv_layers(nn.Module):
         self.stride_list = [args.sincnet_stride, 2, 2]
         current_input = args.window_size_sig + (args.sincnet_kernel_size -1)
         normalize = args.sincnet_input_normalize
-        
+
         for i in range(self.cnn_layer_num):
             if i==0:
                 self.conv.append(SincConv_fast(out_channels=cnn_channel_sizes[i], 
@@ -206,7 +206,7 @@ class sincnet_conv_layers(nn.Module):
                                             out_channels=cnn_channel_sizes[i], 
                                             kernel_size=cnn_kernel_sizes[i], 
                                             stride=self.stride_list[i]))
-            
+
             # self.maxpool.append(nn.MaxPool1d(self.max_pool_list[i]))
             layernorm_output = int((current_input-cnn_kernel_sizes[i]+1)/self.stride_list[i])
             # self.ln.append(nn.LayerNorm([cnn_channel_sizes[i], layernorm_output]))
@@ -239,12 +239,7 @@ class SINCNET_FEATURE(nn.Module):
         self.sinc_conv = sincnet_conv_layers(args)
         
     def forward(self, waveforms):
-        output_list = []
         waveforms = waveforms.permute(1,0,2)
-        # for idx, conv in enumerate(self.conv_list):
-        #     output_list.append(conv(waveforms[idx]))
-        for waveform in waveforms:
-            output_list.append(self.sinc_conv(waveform))
-
+        output_list = [self.sinc_conv(waveform) for waveform in waveforms]
         return torch.stack(output_list).permute(1,0,3,2)
 

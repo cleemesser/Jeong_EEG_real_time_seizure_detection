@@ -45,6 +45,10 @@ from builder.trainer import *
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 list_of_test_results_per_seed = []
 
+val_per_epochs = 10
+epoch_losses =[]
+loss = 0
+
 for seed_num in args.seed_list:
     args.seed = seed_num
     set_seeds(args)
@@ -56,16 +60,17 @@ for seed_num in args.seed_list:
     # Load Data, Create Model 
     train_loader, val_loader, test_loader, len_train_dir, len_val_dir, len_test_dir = get_data_preprocessed(args)
     # print("args: ", args)
-    model = get_detector_model(args) 
-    val_per_epochs = 10
+    model = get_detector_model(args)
     model = model(args, device).to(device)
     criterion = nn.CrossEntropyLoss(reduction='none')
 
     if args.checkpoint:
-        if args.last:
-            ckpt_path = args.dir_result + '/' + args.project_name + '/ckpts/best_{}.pth'.format(str(seed_num))
-        elif args.best:
-            ckpt_path = args.dir_result + '/' + args.project_name + '/ckpts/best_{}.pth'.format(str(seed_num))
+        if args.last or args.best:
+            ckpt_path = (
+                f'{args.dir_result}/{args.project_name}'
+                + f'/ckpts/best_{str(seed_num)}.pth'
+            )
+
         checkpoint = torch.load(ckpt_path, map_location=device)
         model.load_state_dict(checkpoint['model'])
         logger.best_auc = checkpoint['score']
@@ -107,14 +112,11 @@ for seed_num in args.seed_list:
     start = time.time()
     pbar = tqdm(total=args.epochs, initial=0, bar_format="{desc:<5}{percentage:3.0f}%|{bar:10}{r_bar}")
     for epoch in range(start_epoch, args.epochs+1):
-        epoch_losses =[]
-        loss = 0
-
         for train_batch in train_loader:
             train_x, train_y, seq_lengths, target_lengths, aug_list, signal_name_list = train_batch
             train_x, train_y = train_x.to(device), train_y.to(device)
             iteration += 1
-         
+
             model, iter_loss = get_trainer(args, iteration, train_x, train_y, seq_lengths, target_lengths, model, logger, device, scheduler, optimizer, criterion, signal_name_list)
             logger.loss += np.mean(iter_loss)
 
@@ -130,13 +132,13 @@ for seed_num in args.seed_list:
                 val_iteration = 0
                 logger.val_loss = 0
                 with torch.no_grad():
-                    for idx, batch in enumerate(tqdm(val_loader)):
+                    for batch in tqdm(val_loader):
                         val_x, val_y, seq_lengths, target_lengths, aug_list, signal_name_list = batch
                         val_x, val_y = val_x.to(device), val_y.to(device)
                         model, val_loss = get_trainer(args, iteration, val_x, val_y, seq_lengths, target_lengths, model, logger, device, scheduler, optimizer, criterion, signal_name_list, flow_type=args.test_type)
                         logger.val_loss += np.mean(val_loss)
                         val_iteration += 1
-                    
+
                     logger.log_val_loss(val_iteration, iteration)
                     logger.add_validation_logs(iteration)
                     logger.save(model, optimizer, iteration, epoch)
@@ -172,12 +174,20 @@ os.system("echo  \'#######################################\'")
 os.system("echo  \'##### Final test results per seed #####\'")
 os.system("echo  \'#######################################\'")
 for result, tpr, tnr in list_of_test_results_per_seed:    
-    os.system("echo  \'seed_case:{} -- auc: {}, apr: {}, f1_score: {}, tpr: {}, tnr: {}\'".format(str(result[0]), str(result[1]), str(result[2]), str(result[3]), str(tpr), str(tnr)))
+    os.system(
+        f"echo  \'seed_case:{str(result[0])} -- auc: {str(result[1])}, apr: {str(result[2])}, f1_score: {str(result[3])}, tpr: {str(tpr)}, tnr: {str(tnr)}\'"
+    )
+
     auc_list.append(result[1])
     apr_list.append(result[2])
     f1_list.append(result[3])
     tpr_list.append(tpr)
     tnr_list.append(tnr)
-os.system("echo  \'Total average -- auc: {}, apr: {}, f1_score: {}, tnr: {}, tpr: {}\'".format(str(np.mean(auc_list)), str(np.mean(apr_list)), str(np.mean(f1_list)), str(np.mean(tpr_list)), str(np.mean(tnr_list))))
-os.system("echo  \'Total std -- auc: {}, apr: {}, f1_score: {}, tnr: {}, tpr: {}\'".format(str(np.std(auc_list)), str(np.std(apr_list)), str(np.std(f1_list)), str(np.std(tpr_list)), str(np.std(tnr_list))))
+os.system(
+    f"echo  \'Total average -- auc: {str(np.mean(auc_list))}, apr: {str(np.mean(apr_list))}, f1_score: {str(np.mean(f1_list))}, tnr: {str(np.mean(tpr_list))}, tpr: {str(np.mean(tnr_list))}\'"
+)
+
+os.system(
+    f"echo  \'Total std -- auc: {str(np.std(auc_list))}, apr: {str(np.std(apr_list))}, f1_score: {str(np.std(f1_list))}, tnr: {str(np.std(tpr_list))}, tpr: {str(np.std(tnr_list))}\'"
+)
     

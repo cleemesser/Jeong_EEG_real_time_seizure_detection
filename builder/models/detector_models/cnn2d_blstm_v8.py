@@ -20,20 +20,18 @@ from builder.models.feature_extractor.sincnet_feature import SINCNET_FEATURE
 
 class CNN2D_BLSTM_V8(nn.Module):
         def __init__(self, args, device):
-                super(CNN2D_BLSTM_V8, self).__init__()      
+                super(CNN2D_BLSTM_V8, self).__init__()
                 self.args = args
-                
+
                 self.num_layers = args.num_layers
                 self.hidden_dim = 256
                 self.dropout = args.dropout
                 self.num_data_channel = args.num_channel
                 self.sincnet_bandnum = args.sincnet_bandnum
-                
+
                 self.feature_extractor = args.enc_model
 
-                if self.feature_extractor == "raw":
-                        pass
-                else:
+                if self.feature_extractor != "raw":
                         self.feat_models = nn.ModuleDict([
                                 ['psd1', PSD_FEATURE1()],
                                 ['psd2', PSD_FEATURE2()],
@@ -44,7 +42,7 @@ class CNN2D_BLSTM_V8(nn.Module):
                                                         ]])
                         self.feat_model = self.feat_models[self.feature_extractor]
 
-                if args.enc_model == "psd1" or args.enc_model == "psd2":
+                if args.enc_model in ["psd1", "psd2"]:
                         self.feature_num = 7
                 elif args.enc_model == "sincnet":
                         self.feature_num = args.cnn_channel_sizes[args.sincnet_layer_num-1]
@@ -55,7 +53,7 @@ class CNN2D_BLSTM_V8(nn.Module):
                 elif args.enc_model == "raw":
                         self.feature_num = 1
                         self.num_data_channel = 1
-                
+
                 activation = 'relu'
                 self.activations = nn.ModuleDict([
                         ['lrelu', nn.LeakyReLU()],
@@ -97,7 +95,7 @@ class CNN2D_BLSTM_V8(nn.Module):
                                 nn.MaxPool2d(kernel_size=(1,4), stride=(1,4)),
                                 conv2d_bn(128, 256, (1,9), (1,2), (0,4)),
                         )
-                elif args.enc_model == "psd1" or args.enc_model == "psd2":
+                elif args.enc_model in ["psd1", "psd2"]:
                         self.features = nn.Sequential(
                                 conv2d_bn(1,  64, (7,21), (7,2), (0,10)), 
                                 conv2d_bn(64, 128, (1,21), (1,2), (0,10)),
@@ -147,9 +145,9 @@ class CNN2D_BLSTM_V8(nn.Module):
                 x = self.agvpool(x)
                 x = torch.squeeze(x, 2)
                 x = x.permute(0, 2, 1)
-                output, _ = self.blstm(x, self.blstm_hidden)    
-                self.hidden = tuple(([Variable(var.data) for var in self.hidden]))
-                output, self.hidden = self.lstm(output, self.hidden)    
+                output, _ = self.blstm(x, self.blstm_hidden)
+                self.hidden = tuple(Variable(var.data) for var in self.hidden)
+                output, self.hidden = self.lstm(output, self.hidden)
                 output = output[:,-1,:]
                 output = self.classifier(output)
                 return output, self.hidden

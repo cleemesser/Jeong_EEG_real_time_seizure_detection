@@ -96,10 +96,11 @@ class SELayer(nn.Module):
 
 def conv_3x3_bn(inp, oup, stride, is_psd):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False) if not is_psd
-                else nn.Conv2d(inp, oup, (1,7), (1,stride), (0,3), bias=False),
+        nn.Conv2d(inp, oup, (1, 7), (1, stride), (0, 3), bias=False)
+        if is_psd
+        else nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
         nn.BatchNorm2d(oup),
-        h_swish()
+        h_swish(),
     )
 
 
@@ -119,32 +120,61 @@ class InvertedResidual(nn.Module):
         self.identity = stride == 1 and inp == oup
 
         if inp == hidden_dim:
-           self.conv = nn.Sequential(
-                nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2, groups=hidden_dim, bias=False) if not is_psd 
-                                else nn.Conv2d(hidden_dim, hidden_dim, (1,kernel_size), (1,stride), (0,((kernel_size - 1) // 2)), groups=hidden_dim, bias=False),
+            self.conv = nn.Sequential(
+                nn.Conv2d(
+                    hidden_dim,
+                    hidden_dim,
+                    (1, kernel_size),
+                    (1, stride),
+                    (0, ((kernel_size - 1) // 2)),
+                    groups=hidden_dim,
+                    bias=False,
+                )
+                if is_psd
+                else nn.Conv2d(
+                    hidden_dim,
+                    hidden_dim,
+                    kernel_size,
+                    stride,
+                    (kernel_size - 1) // 2,
+                    groups=hidden_dim,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(hidden_dim),
                 h_swish() if use_hs else nn.ReLU(inplace=True),
-                # Squeeze-and-Excite
                 SELayer(hidden_dim) if use_se else nn.Identity(),
-                # pw-linear
                 nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
                 nn.BatchNorm2d(oup),
-                )
+            )
+
 
         else:
             self.conv = nn.Sequential(
-                # pw
                 nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
                 nn.BatchNorm2d(hidden_dim),
                 h_swish() if use_hs else nn.ReLU(inplace=True),
-                # dw
-                nn.Conv2d(hidden_dim, hidden_dim, kernel_size, stride, (kernel_size - 1) // 2, groups=hidden_dim, bias=False) if not is_psd 
-                            else nn.Conv2d(hidden_dim, hidden_dim, (1,kernel_size), (1,stride), (0,(kernel_size - 1) // 2), groups=hidden_dim, bias=False),
+                nn.Conv2d(
+                    hidden_dim,
+                    hidden_dim,
+                    (1, kernel_size),
+                    (1, stride),
+                    (0, (kernel_size - 1) // 2),
+                    groups=hidden_dim,
+                    bias=False,
+                )
+                if is_psd
+                else nn.Conv2d(
+                    hidden_dim,
+                    hidden_dim,
+                    kernel_size,
+                    stride,
+                    (kernel_size - 1) // 2,
+                    groups=hidden_dim,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(hidden_dim),
-                # Squeeze-and-Excite
                 SELayer(hidden_dim) if use_se else nn.Identity(),
                 h_swish() if use_hs else nn.ReLU(inplace=True),
-                # pw-linear
                 nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
                 nn.BatchNorm2d(oup),
             )
@@ -152,9 +182,8 @@ class InvertedResidual(nn.Module):
     def forward(self, x):
         if self.identity:
             return x + self.conv(x)
-        else:
-            x = self.conv(x)
-            return x
+        x = self.conv(x)
+        return x
 
 
 class MOBILENETV3(nn.Module):
@@ -208,7 +237,7 @@ class MOBILENETV3(nn.Module):
                                 ['sincnet', SINCNET_FEATURE(args=args,
                                                         num_eeg_channel=self.num_data_channel) # padding to 0 or (kernel_size-1)//2
                                                         ]])
-        
+
         # building first layer
         if self.args.eeg_type == "bipolar":
             input_channel = _make_divisible(20 * self.width_mult, 8)
@@ -219,16 +248,15 @@ class MOBILENETV3(nn.Module):
 
         self.is_features = True
         self.is_psd = False
-        if args.enc_model == "psd1" or args.enc_model == 'psd2':
+        if args.enc_model in ["psd1", 'psd2']:
             self.is_psd = True
             self.conv1 = conv_3x3_bn(self.num_data_channel, input_channel, 2, self.is_psd)
+        elif self.enc_model == 'raw':
+            self.is_features = False
+            self.conv1 = conv_3x3_bn(1, input_channel, 2, self.is_psd)
         else:
-            if self.enc_model == 'raw':
-                self.is_features = False
-                self.conv1 = conv_3x3_bn(1, input_channel, 2, self.is_psd)
-            else:
-                self.conv1 = conv_3x3_bn(self.num_data_channel, input_channel, 2, self.is_psd)
-    
+            self.conv1 = conv_3x3_bn(self.num_data_channel, input_channel, 2, self.is_psd)
+
 
         # building inverted residual blocks
         layers = nn.ModuleList()
@@ -256,7 +284,7 @@ class MOBILENETV3(nn.Module):
     def forward(self, x):
         # print(f'0: {x.shape}')
         x = x.permute(0,2,1)
-        
+
         if self.is_features:
             x = self.feature_extractor[self.enc_model](x)
         else:

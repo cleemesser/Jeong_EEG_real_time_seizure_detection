@@ -25,7 +25,7 @@ class ALEXNET_V1(nn.Module):
         self.num_classes = self.args.output_dim
         self.in_channels = self.args.num_channel
 
-        if self.args.enc_model == "sincnet" or self.args.enc_model == "psd":
+        if self.args.enc_model in ["sincnet", "psd"]:
             self.features = True
             self.feature_extractor = nn.ModuleDict({
                 "psd" : PSD_FEATURE(),

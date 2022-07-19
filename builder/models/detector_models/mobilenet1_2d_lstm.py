@@ -90,9 +90,9 @@ class MOBILENET1_2D_LSTM(nn.Module):
                 x = self.model(x)
                 x = self.agvpool(x)
                 x = torch.squeeze(x, 2).permute(0, 2, 1)
-                self.hidden = tuple(([Variable(var.data) for var in self.hidden]))
+                self.hidden = tuple(Variable(var.data) for var in self.hidden)
 
-                output, self.hidden = self.lstm(x, self.hidden)    
+                output, self.hidden = self.lstm(x, self.hidden)
                 output = output[:,-1,:]
                 output = self.linear_mean1(output)
                 output = self.bn1(output)

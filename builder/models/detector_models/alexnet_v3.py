@@ -44,7 +44,7 @@ class ALEXNET_V3(nn.Module):
                                                         num_eeg_channel=self.num_data_channel) # padding to 0 or (kernel_size-1)//2
                                                         ]])
 
-        if self.enc_model == 'psd1' or self.enc_model =='psd2':
+        if self.enc_model in ['psd1', 'psd2']:
             self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=(1,21), stride=(1,4))
             self.net = nn.Sequential(
                 # nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=11, stride=4),  # (b x 96 x 55 x 55)
@@ -87,19 +87,17 @@ class ALEXNET_V3(nn.Module):
                 self.features = False
                 self.conv1 = nn.Conv2d(in_channels=1, out_channels=96, kernel_size=(1,21), stride=(1,4)) # compress first
                 self.output_size = 2*5
+            elif self.enc_model == 'sincnet':
+                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=(1,21), stride=(1,4))
+                self.output_size = 2*2
+            elif self.enc_model == 'stft1':
+                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
+                self.output_size = 2*2
+            elif self.enc_model == 'stft2':
+                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
+                self.output_size = 5*2
             else:
-                # self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=11, stride=4)
-                if self.enc_model == 'sincnet':
-                    self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=(1,21), stride=(1,4))
-                    self.output_size = 2*2
-                elif self.enc_model == 'stft1':
-                    self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
-                    self.output_size = 2*2
-                elif self.enc_model == 'stft2':
-                    self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
-                    self.output_size = 5*2
-                else:
-                    print('Unsupported feature extractor chosen...')
+                print('Unsupported feature extractor chosen...')
         # self.fc1 = nn.Linear(in_features=64 * self.output_size, out_features=512) 
         in_feature = 64 * self.output_size
         self.fc1 = nn.Linear(in_features=64 * self.output_size, out_features=in_feature//2) 

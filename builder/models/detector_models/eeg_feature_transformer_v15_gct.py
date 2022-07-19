@@ -27,7 +27,7 @@ from builder.models.src.transformer.module import PositionalEncoding
 
 class EEG_FEATURE_TRANSFORMER_V15_GCT(nn.Module):
     def __init__(self, args, device):
-        super(EEG_FEATURE_TRANSFORMER_V15_GCT, self).__init__()      
+        super(EEG_FEATURE_TRANSFORMER_V15_GCT, self).__init__()
         self.args = args
 
         self.num_layers = args.num_layers
@@ -38,9 +38,7 @@ class EEG_FEATURE_TRANSFORMER_V15_GCT(nn.Module):
         enc_model_dim = 128
         self.feature_extractor = args.enc_model
 
-        if self.feature_extractor == "raw":
-            pass
-        else:
+        if self.feature_extractor != "raw":
             self.feat_models = nn.ModuleDict([
                     ['psd1', PSD_FEATURE1()],
                     ['psd2', PSD_FEATURE2()],
@@ -51,7 +49,7 @@ class EEG_FEATURE_TRANSFORMER_V15_GCT(nn.Module):
                                             ]])
             self.feat_model = self.feat_models[self.feature_extractor]
 
-        if args.enc_model == "psd1" or args.enc_model == "psd2":
+        if args.enc_model in ["psd1", "psd2"]:
             self.feature_num = 7
         elif args.enc_model == "sincnet":
             self.feature_num = args.cnn_channel_sizes[args.sincnet_layer_num-1]
@@ -105,7 +103,7 @@ class EEG_FEATURE_TRANSFORMER_V15_GCT(nn.Module):
                     nn.MaxPool2d(kernel_size=(1,4), stride=(1,4)),
                     conv2d_bn(128, 256, (1,13), 1, (0,6)),
                     conv2d_bn(256, 256, (1,7), 1, (0,3)),
-            ) 
+            )
         block_mask = torch.tensor([[1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
                                 [0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,	1, 0, 0, 0, 0, 0, 0],
                                 [1, 0, 1, 0, 1,	0, 0, 0, 1, 0, 0, 0, 0,	0, 0, 0, 0, 0, 0, 0],
@@ -169,8 +167,8 @@ class EEG_FEATURE_TRANSFORMER_V15_GCT(nn.Module):
         x = x.reshape(x.size(0), 20, -1)
         x = self.transformer_encoder(x)
         x = self.agvpool(x)
-        self.hidden = tuple(([Variable(var.data) for var in self.hidden]))
-        output, self.hidden = self.lstm(x.permute(0,2,1), self.hidden)    
+        self.hidden = tuple(Variable(var.data) for var in self.hidden)
+        output, self.hidden = self.lstm(x.permute(0,2,1), self.hidden)
         output = self.classifier(output.squeeze(1))
         return output, self.hidden
 

@@ -90,10 +90,11 @@ class SELayer(nn.Module):
 
 def conv_3x3_bn(inp, oup, stride, is_psd):
     return nn.Sequential(
-        nn.Conv2d(inp, oup, (1,9), (1,stride), (0,4), bias=False) if not is_psd
-                else nn.Conv2d(inp, oup, (1,9), (1,stride), (0,4), bias=False),
+        nn.Conv2d(inp, oup, (1, 9), (1, stride), (0, 4), bias=False)
+        if is_psd
+        else nn.Conv2d(inp, oup, (1, 9), (1, stride), (0, 4), bias=False),
         nn.BatchNorm2d(oup),
-        h_swish()
+        h_swish(),
     )
 
 
@@ -143,9 +144,8 @@ class InvertedResidual(nn.Module):
     def forward(self, x):
         if self.identity:
             return x + self.conv(x)
-        else:
-            x = self.conv(x)
-            return x
+        x = self.conv(x)
+        return x
 
 
 class MOBILENETV3_V2(nn.Module):
@@ -209,24 +209,23 @@ class MOBILENETV3_V2(nn.Module):
 
         self.is_features = True
         self.is_psd = False
-        if args.enc_model == "psd1" or args.enc_model == 'psd2':
+        if args.enc_model in ["psd1", 'psd2']:
             self.is_psd = True
             self.conv1 = conv_3x3_bn(self.num_data_channel, input_channel, 2, self.is_psd)
+        elif self.enc_model == 'raw':
+            self.is_features = False
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(1, input_channel, (1,51), (1,2), (0,25)),
+                nn.BatchNorm2d(input_channel),
+                h_swish()
+            )
         else:
-            if self.enc_model == 'raw':
-                self.is_features = False
-                self.conv1 = nn.Sequential(
-                    nn.Conv2d(1, input_channel, (1,51), (1,2), (0,25)),
-                    nn.BatchNorm2d(input_channel),
-                    h_swish()
-                )
-            else:
-                self.conv1 = nn.Sequential(
-                    nn.Conv2d(1, input_channel, (7,21), (7,2), (0,10)),
-                    nn.BatchNorm2d(input_channel),
-                    h_swish()
-                )
-    
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(1, input_channel, (7,21), (7,2), (0,10)),
+                nn.BatchNorm2d(input_channel),
+                h_swish()
+            )
+
 
         # building inverted residual blocks
         layers = nn.ModuleList()
@@ -253,7 +252,7 @@ class MOBILENETV3_V2(nn.Module):
 
     def forward(self, x):
         x = x.permute(0,2,1)
-        
+
         if self.args.enc_model != "raw":
             x = self.feature_extractor[self.enc_model](x)
             if self.args.enc_model == "sincnet":

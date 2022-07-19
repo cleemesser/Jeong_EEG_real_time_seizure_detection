@@ -31,19 +31,19 @@ class Evaluator(object):
         self.confusion_matrix = np.zeros((self.n_labels, self.n_labels))
         self.batch_size = args.batch_size
         self.best_auc = 0
-        self.labels_list = [i for i in range(self.n_labels)]
+        self.labels_list = list(range(self.n_labels))
         self.seizure_wise_eval_for_binary = False
         self.y_true_multi = []
         self.y_pred_multi = []
         self.signal_info_list = []
-    
+
         self.thresholds_margintest = []
         self.seed_rise_accuracy = {}
         self.seed_fall_accuracy = {}
         for margin in args.margin_list:
             self.seed_rise_accuracy[str(margin)] = 0
             self.seed_fall_accuracy[str(margin)] = 0
-        
+
         self.probability_list = []
         self.final_target_list = []
 
@@ -80,10 +80,10 @@ class Evaluator(object):
             temp_score = f1_score(y_true_multi_array, temp_output, average="binary")
             if temp_score > f1:
                 f1 = temp_score
-            
+
         result = np.round(np.array([auc, apr, f1]), decimals=4)
         fpr, tpr, thresholds = roc_curve(y_true_multi_array, self.y_pred_multi[:,1], pos_label=1)
-        fnr = 1 - tpr 
+        fnr = 1 - tpr
         tnr = 1 - fpr
         best_threshold = np.argmax(tpr + tnr)
         print("Best threshold is: ", thresholds[best_threshold])
@@ -92,15 +92,15 @@ class Evaluator(object):
         picked_tnrs = []
         picked_tprs = []
         for tnr_one in self.args.tnr_for_margintest:
-            picked_tnr = list([0 if x< tnr_one else x for x in tnr_list])
-            picked_tnr_threshold = np.argmax(tpr + picked_tnr)        
+            picked_tnr = [0 if x< tnr_one else x for x in tnr_list]
+            picked_tnr_threshold = np.argmax(tpr + picked_tnr)
             self.thresholds_margintest.append(thresholds[picked_tnr_threshold])
             picked_tnrs.append(np.round(tnr[picked_tnr_threshold], decimals=4))
             picked_tprs.append(np.round(tpr[picked_tnr_threshold], decimals=4))
         print("TNRS: ", picked_tnrs)
         print("TPRS: ", picked_tprs)
         print("Selected Thresholds: ", self.thresholds_margintest)
-        
+
         if self.args.seizure_wise_eval_for_binary:
             indx_by_seiz = [[], [], [], [], [], [], [], []]
             test_pat_dict = {}
@@ -116,20 +116,23 @@ class Evaluator(object):
                 if pat_id not in test_pat_dict:
                     test_pat_dict[pat_id] = []
                 test_pat_dict[pat_id].append([int(pat_seiz), idx])
-            for pat in test_pat_dict:
-                seizure_types = list(set([seiz for seiz, idx in test_pat_dict[pat]]))
+            for pat, value in test_pat_dict.items():
+                seizure_types = list({seiz for seiz, idx in test_pat_dict[pat]})
                 seizure_types.remove(0)
 
                 for seizure_type in seizure_types:
                     rest_types = list(seizure_types)
                     rest_types.remove(seizure_type)
-                    indx_by_seiz[seizure_type-1].append(list([idx for seiz, idx in test_pat_dict[pat] if seiz not in rest_types]))
+                    indx_by_seiz[seizure_type - 1].append(
+                        [idx for seiz, idx in value if seiz not in rest_types]
+                    )
+
 
             for indx, t in enumerate(indx_by_seiz):
                 indx_by_seiz[indx] = [item for sublist in t for item in sublist]
             lists_of_seizures_true = [[], [], [], [], [], [], [], []]
             lists_of_seizures_pred = [[], [], [], [], [], [], [], []]
-            
+
             for indx, indxs_list  in enumerate(indx_by_seiz):
                 lists_of_seizures_pred[indx] = [list(self.y_pred_multi[i]) for i in indxs_list]
                 lists_of_seizures_true[indx] = [list(self.y_true_multi[i]) for i in indxs_list]
@@ -152,7 +155,10 @@ class Evaluator(object):
                     if temp_score > f1:
                         f1 = temp_score
                 f1 = np.round(f1, decimals=4)
-                print("Seizure:{} - auc:{} apr:{} f1:{}".format(self.args.seizure_to_num_inv[str(q+1)], str(auc), str(apr), str(f1)))
+                print(
+                    f"Seizure:{self.args.seizure_to_num_inv[str(q+1)]} - auc:{str(auc)} apr:{str(apr)} f1:{str(f1)}"
+                )
+
 
         if self.args.margin_test:
             target_stack = torch.stack(self.final_target_list)
@@ -161,16 +167,22 @@ class Evaluator(object):
                     pred_stack = torch.stack(self.probability_list)
                     pred_stack = (pred_stack > threshold).int()
                     rise_true, rise_pred_correct, fall_true, fall_pred_correct = binary_detector_evaluator(pred_stack, target_stack, margin)
-                    print("Margin: {}, Threshold: {}, TPR: {}, TNR: {}".format(str(margin), str(threshold), str(picked_tprs[threshold_idx]), str(picked_tnrs[threshold_idx])))
-                    # print("rise_t:{}, rise_cor:{}, fall_t:{}, fall_cor:{}".format(str(rise_true), str(rise_pred_correct), str(fall_true), str(fall_pred_correct)))    
-                    print("rise_accuarcy:{}, fall_accuracy:{}".format(str(np.round((rise_pred_correct/float(rise_true)), decimals=4)), str(np.round((fall_pred_correct/float(fall_true)), decimals=4))))
+                    print(
+                        f"Margin: {str(margin)}, Threshold: {str(threshold)}, TPR: {str(picked_tprs[threshold_idx])}, TNR: {str(picked_tnrs[threshold_idx])}"
+                    )
+
+                    # print("rise_t:{}, rise_cor:{}, fall_t:{}, fall_cor:{}".format(str(rise_true), str(rise_pred_correct), str(fall_true), str(fall_pred_correct)))
+                    print(
+                        f"rise_accuarcy:{str(np.round((rise_pred_correct/float(rise_true)), decimals=4))}, fall_accuracy:{str(np.round((fall_pred_correct/float(fall_true)), decimals=4))}"
+                    )
+
                 self.seed_rise_accuracy[str(margin)] = np.round((rise_pred_correct/float(rise_true)), decimals=4)
                 self.seed_fall_accuracy[str(margin)] = np.round((fall_pred_correct/float(fall_true)), decimals=4)
 
         return result, np.round(tpr[best_threshold], decimals=4), np.round(fnr[best_threshold], decimals=4), np.round(tnr[best_threshold], decimals=4), np.round(fpr[best_threshold], decimals=4)
 
     def performance_metric_multi(self):
-        print("bckg and {}".format(" ".join(self.args.seiz_classes)))
+        print(f'bckg and {" ".join(self.args.seiz_classes)}')
         print("Left: true, Top: pred")
         row_sums = self.confusion_matrix.sum(axis=1)
         confusion_matrix_proba = self.confusion_matrix / row_sums[:, np.newaxis]
@@ -192,7 +204,7 @@ class Evaluator(object):
         multi_weighted_f1_score = f1_score(y_true_multi_array, y_pred_multi_array, average="weighted")
         multi_unweighted_f1_score = f1_score(y_true_multi_array, y_pred_multi_array, average="macro")
         multi_f1_scores = f1_score(y_true_multi_array, y_pred_multi_array, average=None)
-            
+
         result = np.round(np.array([multi_weighted_auc, multi_unweighted_auc, multi_weighted_apr, multi_unweighted_apr, multi_weighted_f1_score, multi_unweighted_f1_score]), decimals=4)
         result_aucs = np.round(multi_aucs, decimals=4)
         result_aprs = np.round(multi_aprs, decimals=4)
@@ -206,7 +218,7 @@ class Evaluator(object):
         ppvs = []
         row_sums = self.confusion_matrix.sum(axis=1)
         column_sums = self.confusion_matrix.sum(axis=0)
-        
+
         for i in range(self.args.output_dim):
             tp = float(self.confusion_matrix[i][i])
             fn = float(row_sums[i] - tp)
@@ -226,7 +238,7 @@ class Evaluator(object):
             else:
                 tnr = tn / (tn + fp) #specificity
                 fpr = fp / (fp + tn)
-            
+
             if (tp + fp) == 0:
                 fdr = 1
                 ppv = 0
@@ -240,7 +252,7 @@ class Evaluator(object):
             fprs.append( np.round(fpr, decimals=4))
             fdrs.append( np.round(fdr, decimals=4))
             ppvs.append( np.round(ppv, decimals=4))
-            
+
         return result, result_aucs, result_aprs, result_f1scores, tprs, fnrs, tnrs, fprs, fdrs, ppvs
        
 
