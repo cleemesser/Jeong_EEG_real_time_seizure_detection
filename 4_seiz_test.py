@@ -103,12 +103,7 @@ def anyovlp(ref, hyp):
     refset = set(range(int(ref[0]), int(ref[1]) + 1))
     hypset = set(range(int(hyp[0]), int(hyp[1]) + 1))
 
-    if len(refset.intersection(hypset)) != 0:
-        return True
-
-    # return gracefully
-    #
-    return False
+    return bool(refset.intersection(hypset))
 
 def ovlp_hyp_seqs(ref, hyp, rind, hind,
                     refflag, hypflag):
@@ -213,9 +208,6 @@ def compute_partial(ref, hyp, rind, hind, rflags, hflags):
     if not anyovlp(ref[rind], hyp[hind]):
         return (float(0), float(0), float(0))
 
-    # check whether detected event stop time exceed the
-    # reference stop time.
-    #
     elif float(hyp[hind][1]) >= float(ref[rind][1]):
 
         #   <---->
@@ -232,11 +224,7 @@ def compute_partial(ref, hyp, rind, hind, rflags, hflags):
         #
         p_hit, p_mis, p_fal = ovlp_ref_seqs(ref, hyp, rind, hind, rflags, hflags)
 
-    # check whether reference event stop time exceed the
-    # detected stop time.
-    #
-    elif float(ref[rind][1]) > float(hyp[hind][1]):
-
+    else:
         #   <------>
         # <----->
         #
@@ -293,7 +281,7 @@ def taes_get_events(start, stop, events_a, hflags):
 def ovlp_get_events(start, stop, events):
     # from "Objective evaluation metrics for automatic classification of EEG events " by Saeedeh Ziyabari1, Vinit Shah1, Meysam Golmohammadi2, Iyad Obeid1 and Joseph Picone1
     # declare output variables
-    
+
     labels = []
     starts = []
     stops = []
@@ -320,7 +308,7 @@ def ovlp_get_events(start, stop, events):
 def ovlp_get_events_with_latency(start, stop, events):
     # from "Objective evaluation metrics for automatic classification of EEG events " by Saeedeh Ziyabari1, Vinit Shah1, Meysam Golmohammadi2, Iyad Obeid1 and Joseph Picone1
     # declare output variables
-    
+
     labels = []
     starts = []
     stops = []
@@ -344,16 +332,15 @@ def ovlp_get_events_with_latency(start, stop, events):
 
         if (event[0] >= start-2) and (event[0] <= stop+5):
             delayed_time = start - event[0]
-            if delayed_time < 0:
-                delayed_time = 0
+            delayed_time = max(delayed_time, 0)
             latencies.append(delayed_time)
-        
+
         if (event[0] < start) and (event[1] > start):
             latencies.append(0)
 
     # exit gracefully
     #
-    if len(latencies) == 0:
+    if not latencies:
         latencies.append(stop-start)
         not_detected = 1
     else:
@@ -447,7 +434,7 @@ def ovlp(ref_events, hyp_events):
         labels, starts, stops = ovlp_get_events(event[0], event[1], ref_events)
         if 1 not in labels:
             fal += 1
-    
+
     return hit, mis, fal, refo, hypo, latency_time, latency_time_of_detected, refo_minus_count
 
 

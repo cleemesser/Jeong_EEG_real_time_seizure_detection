@@ -20,19 +20,17 @@ from builder.models.feature_extractor.sincnet_feature import SINCNET_FEATURE
 
 class CNN1D_BLSTM_V8(nn.Module):
         def __init__(self, args, device):
-                super(CNN1D_BLSTM_V8, self).__init__()      
+                super(CNN1D_BLSTM_V8, self).__init__()
                 self.args = args
-                
+
                 self.num_layers = args.num_layers
                 self.hidden_dim = 256
                 self.dropout = args.dropout
                 self.num_data_channel = args.num_channel
                 self.sincnet_bandnum = args.sincnet_bandnum
 
-                self.feature_extractor = args.enc_model 
-                if self.feature_extractor == "raw":
-                        pass
-                else:
+                self.feature_extractor = args.enc_model
+                if self.feature_extractor != "raw":
                         self.feat_models = nn.ModuleDict([
                                 ['psd1', PSD_FEATURE1()],
                                 ['psd2', PSD_FEATURE2()],
@@ -43,7 +41,7 @@ class CNN1D_BLSTM_V8(nn.Module):
                                                         ]])
                         self.feat_model = self.feat_models[self.feature_extractor]
 
-                if args.enc_model == "psd1" or args.enc_model == "psd2":
+                if args.enc_model in ["psd1", "psd2"]:
                         self.feature_num = 7
                 elif args.enc_model == "sincnet":
                         self.feature_num = args.cnn_channel_sizes[args.sincnet_layer_num-1]
@@ -53,9 +51,9 @@ class CNN1D_BLSTM_V8(nn.Module):
                         self.feature_num = 100
                 elif args.enc_model == "raw":
                         self.feature_num = 1
-                
+
                 self.conv1dconcat_len = self.feature_num * self.num_data_channel
-                
+
                 activation = 'relu'
                 self.activations = nn.ModuleDict([
                         ['lrelu', nn.LeakyReLU()],
@@ -136,9 +134,9 @@ class CNN1D_BLSTM_V8(nn.Module):
 
                 x = self.agvpool(x)
                 x = x.permute(0, 2, 1)
-                output, _ = self.blstm(x, self.blstm_hidden)   
-                self.hidden = tuple(([Variable(var.data) for var in self.hidden])) 
-                output, self.hidden = self.lstm(output, self.hidden) 
+                output, _ = self.blstm(x, self.blstm_hidden)
+                self.hidden = tuple(Variable(var.data) for var in self.hidden)
+                output, self.hidden = self.lstm(output, self.hidden)
                 output = output[:,-1,:]
                 output = self.classifier(output)
                 return output, self.hidden

@@ -75,10 +75,7 @@ def add_results_to_json(js, nbest_hyps, char_list):
     :return: N-best results added utterance dict
     """
     # copy old json info
-    new_js = dict()
-    new_js['utt2spk'] = js['utt2spk']
-    new_js['output'] = []
-
+    new_js = {'utt2spk': js['utt2spk'], 'output': []}
     for n, hyp in enumerate(nbest_hyps, 1):
         # parse hypothesis
         rec_text, rec_token, rec_tokenid, score = parse_hypothesis(
@@ -101,8 +98,8 @@ def add_results_to_json(js, nbest_hyps, char_list):
 
         # show 1-best result
         if n == 1:
-            print('groundtruth: %s' % out_dic['text'])
-            print('prediction : %s' % out_dic['rec_text'])
+            print(f"groundtruth: {out_dic['text']}")
+            print(f"prediction : {out_dic['rec_text']}")
 
     return new_js
 
@@ -153,6 +150,5 @@ def get_attn_pad_mask(padded_input, input_lengths, expand_length):
     non_pad_mask = get_non_pad_mask(padded_input, input_lengths=input_lengths)
     # N x Ti, lt(1) like not operation
     pad_mask = non_pad_mask.squeeze(-1).lt(1)
-    attn_mask = pad_mask.unsqueeze(1).expand(-1, expand_length, -1)
-    return attn_mask
+    return pad_mask.unsqueeze(1).expand(-1, expand_length, -1)
 

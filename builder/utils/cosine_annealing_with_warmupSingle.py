@@ -44,7 +44,7 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
         #                                                  pct_start, cycle_momentum, base_momentum,
         #                                                  max_momentum, div_factor, final_div_factor,
         #                                                  last_epoch, verbose, anneal_strategy='cos', three_phase=False)
-        
+
         #     # Validate optimizer
         # if not isinstance(optimizer, Optimizer):
         #     raise TypeError('{} is not an Optimizer'.format(
@@ -56,13 +56,19 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
             raise ValueError("You must define either total_steps OR (epochs AND steps_per_epoch)")
         elif total_steps is not None:
             if total_steps <= 0 or not isinstance(total_steps, int):
-                raise ValueError("Expected positive integer total_steps, but got {}".format(total_steps))
+                raise ValueError(
+                    f"Expected positive integer total_steps, but got {total_steps}"
+                )
+
             self.total_steps = total_steps
         else:
             if epochs <= 0 or not isinstance(epochs, int):
-                raise ValueError("Expected positive integer epochs, but got {}".format(epochs))
+                raise ValueError(f"Expected positive integer epochs, but got {epochs}")
             if steps_per_epoch <= 0 or not isinstance(steps_per_epoch, int):
-                raise ValueError("Expected positive integer steps_per_epoch, but got {}".format(steps_per_epoch))
+                raise ValueError(
+                    f"Expected positive integer steps_per_epoch, but got {steps_per_epoch}"
+                )
+
             self.total_steps = epochs * steps_per_epoch
 
         self._schedule_phases = [
@@ -84,7 +90,10 @@ class CosineAnnealingWarmUpSingle(torch.optim.lr_scheduler.OneCycleLR):
 
         # Validate pct_start
         if pct_start < 0 or pct_start > 1 or not isinstance(pct_start, float):
-            raise ValueError("Expected float between 0 and 1 pct_start, but got {}".format(pct_start))
+            raise ValueError(
+                f"Expected float between 0 and 1 pct_start, but got {pct_start}"
+            )
+
 
         # Declare anneal_strategy
         self.anneal_func = [self._annealing_linear, self._annealing_cos]

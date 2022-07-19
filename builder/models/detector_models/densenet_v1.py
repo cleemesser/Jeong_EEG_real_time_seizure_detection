@@ -78,7 +78,7 @@ class DENSENET_V1(nn.Module):
         self.bottleneck = True
         self.num_data_channel = self.args.num_channel
 
-        if self.args.enc_model == "sincnet" or self.args.enc_model == "psd":
+        if self.args.enc_model in ["sincnet", "psd"]:
             self.features = True
             if args.enc_model == "psd":
                 self.feature_extractor = PSD_FEATURE()
@@ -95,7 +95,7 @@ class DENSENET_V1(nn.Module):
             nDenseBlocks //= 2
 
         nChannels = 2*self.growthRate
-        
+
         if self.features:
             self.conv1 = nn.Conv2d(self.num_data_channel, nChannels, kernel_size=3, padding=1,
                                bias=False)
@@ -133,7 +133,7 @@ class DENSENET_V1(nn.Module):
 
     def _make_dense(self, nChannels, growthRate, nDenseBlocks, bottleneck):
         layers = []
-        for i in range(int(nDenseBlocks)):
+        for _ in range(int(nDenseBlocks)):
             if bottleneck:
                 layers.append(Bottleneck(nChannels, growthRate))
             else:
@@ -143,10 +143,7 @@ class DENSENET_V1(nn.Module):
 
     def forward(self, x):
         x = x.permute(0,2,1)
-        if self.features:
-            x = self.feature_extractor(x)
-        else:
-            x = torch.unsqueeze(x, dim=1)
+        x = self.feature_extractor(x) if self.features else torch.unsqueeze(x, dim=1)
         print("x shape raw: ", x.shape)
         out = self.conv1(x)
         out = self.trans1(self.dense1(out))

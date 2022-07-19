@@ -29,32 +29,22 @@ class ALEXNET_V2(nn.Module):
         self.num_classes = self.args.output_dim
         self.in_channels = self.args.num_channel
         self.batch_size = args.batch_size
-        if self.args.window_size == 2:
-            self.output_size = 5*11
-        else:
-            self.output_size = 1*5
-
-        if self.args.enc_model == "sincnet" or self.args.enc_model == "psd":
+        self.output_size = 5*11 if self.args.window_size == 2 else 1*5
+        if self.args.enc_model in ["sincnet", "psd"]:
             self.features = True
             self.feature_extractor = nn.ModuleDict({
                 "psd" : PSD_FEATURE(),
                 "sincnet" : SINCNET_FEATURE(args, num_eeg_channel=self.in_channels)
             })
-            
+
             self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=11, stride=4)
-            if self.args.window_size == 2:
-                self.output_size = 5*5
-            else:
-                self.output_size = 5*2
+            self.output_size = 5*5 if self.args.window_size == 2 else 5*2
             self.fc1 = nn.Linear(in_features=256 * self.output_size, out_features=4096)
 
         else:
             self.features = False
             self.conv1 = nn.Conv2d(in_channels=1, out_channels=128, kernel_size=(1,15), stride=(1,4))
-            if self.args.window_size == 2:
-                self.output_size = 5*11
-            else:
-                self.output_size = 1*5
+            self.output_size = 5*11 if self.args.window_size == 2 else 1*5
             self.fc1 = nn.Linear(in_features=256*self.output_size, out_features=1024)
 
         self.pool = nn.MaxPool2d(kernel_size=(1,3), stride=2)
@@ -124,7 +114,7 @@ class ALEXNET_V2(nn.Module):
         x = x.reshape(self.batch_size, -1)
 
         x = self.fc1(x)
-       
+
         return self.classifier(x), 0
 
     def init_state(self, device):

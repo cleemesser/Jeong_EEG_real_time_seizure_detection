@@ -21,7 +21,7 @@ from builder.models.feature_extractor.lfcc_feature import LFCC_FEATURE
 
 class CNN1D_LSTM_V8(nn.Module):
         def __init__(self, args, device):
-                super(CNN1D_LSTM_V8, self).__init__()      
+                super(CNN1D_LSTM_V8, self).__init__()
                 self.args = args
 
                 self.num_layers = args.num_layers
@@ -29,12 +29,10 @@ class CNN1D_LSTM_V8(nn.Module):
                 self.dropout = args.dropout
                 self.num_data_channel = args.num_channel
                 self.sincnet_bandnum = args.sincnet_bandnum
-                
+
                 self.feature_extractor = args.enc_model
 
-                if self.feature_extractor == "raw" or self.feature_extractor == "downsampled":
-                        pass
-                else:
+                if self.feature_extractor not in ["raw", "downsampled"]:
                         self.feat_models = nn.ModuleDict([
                                 ['psd1', PSD_FEATURE1()],
                                 ['psd2', PSD_FEATURE2()],
@@ -46,7 +44,7 @@ class CNN1D_LSTM_V8(nn.Module):
                                                         ]])
                         self.feat_model = self.feat_models[self.feature_extractor]
 
-                if args.enc_model == "psd1" or args.enc_model == "psd2":
+                if args.enc_model in ["psd1", "psd2"]:
                         self.feature_num = 7
                 elif args.enc_model == "LFCC":
                         self.feature_num = 8
@@ -56,11 +54,11 @@ class CNN1D_LSTM_V8(nn.Module):
                         self.feature_num = 50
                 elif args.enc_model == "stft2":
                         self.feature_num = 100
-                elif args.enc_model == "raw" or args.enc_model == "downsampled":
+                elif args.enc_model in ["raw", "downsampled"]:
                         self.feature_num = 1
-                
+
                 self.conv1dconcat_len = self.feature_num * self.num_data_channel
-                
+
                 activation = 'relu'
                 self.activations = nn.ModuleDict([
                         ['lrelu', nn.LeakyReLU()],
@@ -83,6 +81,7 @@ class CNN1D_LSTM_V8(nn.Module):
                                 self.activations[activation],
                                 nn.Dropout(self.dropout),
                 )
+
                 def conv1d_bn_nodr(inp, oup, kernel_size, stride, padding):
                         return nn.Sequential(
                                 nn.Conv1d(inp, oup, kernel_size=kernel_size, stride=stride, padding=padding),
@@ -104,7 +103,7 @@ class CNN1D_LSTM_V8(nn.Module):
                         nn.MaxPool1d(kernel_size=4, stride=4),
                         conv1d_bn(128, 256, 9, 2, 4),
                         )
-                elif args.enc_model == "psd1" or args.enc_model == "psd2":
+                elif args.enc_model in ["psd1", "psd2"]:
                         self.features = nn.Sequential(
                                 conv1d_bn(self.conv1dconcat_len,  64, 21, 2, 10), 
                                 conv1d_bn(64, 128, 21, 2, 10),
@@ -136,7 +135,7 @@ class CNN1D_LSTM_V8(nn.Module):
                                 conv1d_bn(128, 256, 9, 1, 4),
                         )
 
-          
+
                 self.agvpool = nn.AdaptiveAvgPool1d(1)
 
                 self.lstm = nn.LSTM(
@@ -145,7 +144,7 @@ class CNN1D_LSTM_V8(nn.Module):
                         num_layers=args.num_layers,
                         batch_first=True,
                         dropout=args.dropout) 
-                
+
                 self.classifier = nn.Sequential(
                         nn.Linear(in_features=self.hidden_dim, out_features= 64, bias=True),
                         nn.BatchNorm1d(64),
@@ -166,8 +165,8 @@ class CNN1D_LSTM_V8(nn.Module):
                 x = self.features(x)
                 x = self.agvpool(x)
                 x = x.permute(0, 2, 1)
-                self.hidden = tuple(([Variable(var.data) for var in self.hidden]))
-                output, self.hidden = self.lstm(x, self.hidden)    
+                self.hidden = tuple(Variable(var.data) for var in self.hidden)
+                output, self.hidden = self.lstm(x, self.hidden)
                 output = output[:,-1,:]
                 output = self.classifier(output)
                 return output, self.hidden

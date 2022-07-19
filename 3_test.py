@@ -62,20 +62,19 @@ average_speed_over = 10
 time_taken = 0
 num_windows = 30 - args.window_size
 
+result_list = []
 for name in names: 
     # Check if checkpoint exists
-    if args.last:
-        ckpt_path = args.dir_result + '/' + name + '/ckpts/best_{}.pth'.format(str(args.seed))
-    elif args.best:
-        ckpt_path = args.dir_result + '/' + name + '/ckpts/best_{}.pth'.format(str(args.seed))
+    if args.last or args.best:
+        ckpt_path = f'{args.dir_result}/{name}' + f'/ckpts/best_{str(args.seed)}.pth'
     # if not os.path.exists(ckpt_path):
     #     continue
 
-    ckpt_path = args.dir_result + '/' + name + '/ckpts/best_0.pth'
+    ckpt_path = f'{args.dir_result}/{name}/ckpts/best_0.pth'
     ckpt = torch.load(ckpt_path, map_location=device)
 
     # state = {k.replace('module.', ''): v for k, v in ckpt['model'].items()}
-    state = {k: v for k, v in ckpt['model'].items()}
+    state = dict(ckpt['model'].items())
     # print("state: ", state)
     model.load_state_dict(state)
 
@@ -83,7 +82,6 @@ for name in names:
     print('loaded model')
     print("Test type is: ", args.test_type)
     evaluator.reset()
-    result_list = []
     iteration = 0
     evaluator.seizure_wise_eval_for_binary = True
 
@@ -92,7 +90,7 @@ for name in names:
             test_x, test_y, seq_lengths, target_lengths, aug_list, signal_name_list = test_batch
             test_x = test_x.to(device)
             iteration += 1
-            
+
             ### Model Structures
             print(f'iteration : {iteration}')
             iteration_start = time.time()
@@ -104,12 +102,12 @@ for name in names:
             else:
                 print("Selected trainer is not prepared yet...")
                 exit(1)
-            
+
             if not args.ignore_model_speed:
                 iteration_end = time.time()
                 print("1: ", num_windows)
                 print("used device: ", device)
-                print("the number of cpu threads: {}".format(torch.get_num_threads()))
+                print(f"the number of cpu threads: {torch.get_num_threads()}")
 
                 print(f'Time taken to iterate once :    {(iteration_end-iteration_start)} seconds')
                 print(f'Time taken per window slide :    {(iteration_end-iteration_start)/num_windows} seconds')

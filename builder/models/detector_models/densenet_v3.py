@@ -63,20 +63,12 @@ class SingleLayer(nn.Module):
     def __init__(self, nChannels, growthRate, is_psd):
         super(SingleLayer, self).__init__()
 
-        if is_psd:
-            self.net = nn.Sequential(
-                nn.BatchNorm2d(nChannels),
-                nn.ReLU(),
-                nn.Conv2d(nChannels, growthRate, kernel_size=(1,25), 
-                               padding=(0,12), bias=False)
-            )
-        else:
-            self.net = nn.Sequential(
-                nn.BatchNorm2d(nChannels),
-                nn.ReLU(),
-                nn.Conv2d(nChannels, growthRate, kernel_size=(1,25), 
-                               padding=(0,12), bias=False)
-            )
+        self.net = nn.Sequential(
+            nn.BatchNorm2d(nChannels),
+            nn.ReLU(),
+            nn.Conv2d(nChannels, growthRate, kernel_size=(1,25), 
+                           padding=(0,12), bias=False)
+        )
 
     def forward(self, x):
         # out = self.conv1(F.relu(self.bn1(x)))
@@ -124,13 +116,13 @@ class DENSENET_V3(nn.Module):
 
         nChannels = 2*self.growthRate
 
-        self.is_psd = False 
+        self.is_psd = False
         if self.enc_model == 'raw':
             self.features = False
             self.conv1 = nn.Conv2d(1, nChannels, kernel_size=(1,51), stride=(1,10), padding=(0,25), bias=False)
         else:
             self.features = True
-            if self.enc_model == 'psd1' or self.enc_model =='psd2':
+            if self.enc_model in ['psd1', 'psd2']:
                 self.is_psd = True
                 self.conv1 = nn.Conv2d(self.num_data_channel, nChannels, kernel_size=(1,11), stride=(1,2), padding=(0,5),
                                bias=False)
@@ -175,7 +167,7 @@ class DENSENET_V3(nn.Module):
 
     def _make_dense(self, nChannels, growthRate, nDenseBlocks, bottleneck, is_psd):
         layers = []
-        for i in range(int(nDenseBlocks)):
+        for _ in range(int(nDenseBlocks)):
             if bottleneck:
                 layers.append(Bottleneck(nChannels, growthRate, is_psd))
             else:

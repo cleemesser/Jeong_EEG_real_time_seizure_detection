@@ -32,7 +32,7 @@ class PSD_FEATURE1(nn.Module):
         self.freq_resolution = 1
 
         if self.feature_extract_by == 'kaldi':
-            assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin'
+            assert platform.system().lower() in ['linux', 'darwin']
             import torchaudio
 
             self.transforms = torchaudio.transforms.Spectrogram(n_fft=self.freq_resolution*self.sample_rate,
@@ -55,15 +55,14 @@ class PSD_FEATURE1(nn.Module):
             for signal in signals:
                 if self.feature_extract_by == 'kaldi':
                     stft = self.transforms(signal)
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
-                    
                 else:
                     stft = torch.stft(
                         signal, self.n_fft, hop_length=self.hop_length,
                         win_length=self.frame_length, window=torch.hamming_window(self.frame_length),
                         center=False, normalized=False, onesided=True
                     )
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
+                amp = (torch.log(torch.abs(stft) + 1e-10))
+
                 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.641.3620&rep=rep1&type=pdf
                 psd1 = self.psd(amp,0,4)
                 psd2 = self.psd(amp,4,7)
@@ -72,7 +71,7 @@ class PSD_FEATURE1(nn.Module):
                 psd5 = self.psd(amp,14,30)
                 psd6 = self.psd(amp,31,45)
                 psd7 = self.psd(amp,55,100)
-                
+
                 psds = torch.stack((psd1, psd2, psd3, psd4, psd5, psd6, psd7))
                 psd_sample.append(psds)
 
@@ -94,7 +93,7 @@ class PSD_FEATURE2(nn.Module):
         self.freq_resolution = 1
 
         if self.feature_extract_by == 'kaldi':
-            assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin'
+            assert platform.system().lower() in ['linux', 'darwin']
             import torchaudio
 
             self.transforms = torchaudio.transforms.Spectrogram(n_fft=self.freq_resolution*self.sample_rate,
@@ -117,15 +116,14 @@ class PSD_FEATURE2(nn.Module):
             for signal in signals:
                 if self.feature_extract_by == 'kaldi':
                     stft = self.transforms(signal)
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
-                    
                 else:
                     stft = torch.stft(
                         signal, self.n_fft, hop_length=self.hop_length,
                         win_length=self.frame_length, window=torch.hamming_window(self.frame_length),
                         center=False, normalized=False, onesided=True
                     )
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
+                amp = (torch.log(torch.abs(stft) + 1e-10))
+
                 # https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8910555
                 psd1 = self.psd(amp,0,4)
                 psd2 = self.psd(amp,4,8)
@@ -134,7 +132,7 @@ class PSD_FEATURE2(nn.Module):
                 psd5 = self.psd(amp,30,50)
                 psd6 = self.psd(amp,50,70)
                 psd7 = self.psd(amp,70,100)
-                
+
                 psds = torch.stack((psd1, psd2, psd3, psd4, psd5, psd6, psd7))
                 psd_sample.append(psds)
 

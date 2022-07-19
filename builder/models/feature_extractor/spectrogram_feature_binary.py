@@ -31,7 +31,7 @@ class SPECTROGRAM_FEATURE_BINARY1(nn.Module):
         self.freq_resolution = 1
 
         if self.feature_extract_by == 'kaldi':
-            assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin'
+            assert platform.system().lower() in ['linux', 'darwin']
             import torchaudio
 
             self.transforms = torchaudio.transforms.Spectrogram(n_fft=self.freq_resolution*self.sample_rate,
@@ -51,17 +51,15 @@ class SPECTROGRAM_FEATURE_BINARY1(nn.Module):
             for signal in signals:
                 if self.feature_extract_by == 'kaldi':
                     stft = self.transforms(signal)
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
-
                 else:
                     stft = torch.stft(
                         signal, self.n_fft, hop_length=self.hop_length,
                         win_length=self.frame_length, window=torch.hamming_window(self.frame_length),
                         center=False, normalized=False, onesided=True
                     )
-                    
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
-    
+
+                amp = (torch.log(torch.abs(stft) + 1e-10))
+
                 spectrogram_sample.append(amp[:50,:])
 
             spectrogram_batch.append(torch.stack(spectrogram_sample))
@@ -81,7 +79,7 @@ class SPECTROGRAM_FEATURE_BINARY2(nn.Module):
         self.freq_resolution = 1
 
         if self.feature_extract_by == 'kaldi':
-            assert platform.system().lower() == 'linux' or platform.system().lower() == 'darwin'
+            assert platform.system().lower() in ['linux', 'darwin']
             import torchaudio
 
             self.transforms = torchaudio.transforms.Spectrogram(n_fft=self.freq_resolution*self.sample_rate,
@@ -101,16 +99,14 @@ class SPECTROGRAM_FEATURE_BINARY2(nn.Module):
             for signal in signals:
                 if self.feature_extract_by == 'kaldi':
                     stft = self.transforms(signal)
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
                 else:
                     stft = torch.stft(
                         signal, self.n_fft, hop_length=self.hop_length,
                         win_length=self.frame_length, window=torch.hamming_window(self.frame_length),
                         center=False, normalized=False, onesided=True
                     )
-                    
-                    amp = (torch.log(torch.abs(stft) + 1e-10))
-    
+
+                amp = (torch.log(torch.abs(stft) + 1e-10))
                 spectrogram_sample.append(amp[:100,:])
 
             spectrogram_batch.append(torch.stack(spectrogram_sample))

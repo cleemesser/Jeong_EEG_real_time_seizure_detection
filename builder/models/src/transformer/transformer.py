@@ -54,9 +54,6 @@ class Transformer(nn.Module):
             nbest_hyps:
         """
         encoder_outputs, *_ = self.encoder(input.unsqueeze(0), input_length)
-        nbest_hyps = self.decoder.recognize_beam(encoder_outputs[0],
-                                                 char_list,
-                                                 args)
-        return nbest_hyps
+        return self.decoder.recognize_beam(encoder_outputs[0], char_list, args)
 
    

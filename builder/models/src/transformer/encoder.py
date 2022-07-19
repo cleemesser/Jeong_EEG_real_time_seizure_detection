@@ -99,7 +99,4 @@ class TransformerEncoder(nn.Module):
             enc_output, enc_slf_attn = enc_layer(enc_output)
             if return_attns:
                 enc_slf_attn_list += [enc_slf_attn]
-        if return_attns:
-            return enc_output, enc_slf_attn_list
-        else:
-            return enc_output
+        return (enc_output, enc_slf_attn_list) if return_attns else enc_output

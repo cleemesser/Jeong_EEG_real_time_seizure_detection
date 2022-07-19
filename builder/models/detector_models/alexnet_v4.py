@@ -23,14 +23,14 @@ class ALEXNET_V4(nn.Module):
             num_classes (int): number of classes to predict with this model
         """
         super(ALEXNET_V4, self).__init__()
-    
+
         self.args = args
         self.num_classes = self.args.output_dim
         self.in_channels = self.args.num_channel
         self.enc_model = self.args.enc_model
         self.features = True
         self.num_data_channel = self.args.num_channel
-            
+
         self.feature_extractor = nn.ModuleDict([
                                 ['psd1', PSD_FEATURE1()],
                                 ['psd2', PSD_FEATURE2()],
@@ -40,7 +40,7 @@ class ALEXNET_V4(nn.Module):
                                                         num_eeg_channel=self.num_data_channel) # padding to 0 or (kernel_size-1)//2
                                                         ]])
 
-        if self.enc_model == 'psd1' or self.enc_model =='psd2':
+        if self.enc_model in ['psd1', 'psd2']:
             self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=(1,21), stride=(1,4))
             self.net = nn.Sequential(
                 nn.ReLU(),
@@ -81,21 +81,20 @@ class ALEXNET_V4(nn.Module):
                 self.features = False
                 self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=(1,51), stride=(1,4)) 
                 self.output_size = 19*5
+            elif self.enc_model == 'sincnet':
+                self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=(7,21), stride=(7,2))
+                self.output_size = 20*5
+            elif self.enc_model == 'stft1':
+                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
+                self.output_size = 2*2
+            elif self.enc_model == 'stft2':
+                self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
+                self.output_size = 5*2
             else:
-                if self.enc_model == 'sincnet':
-                    self.conv1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=(7,21), stride=(7,2))
-                    self.output_size = 20*5
-                elif self.enc_model == 'stft1':
-                    self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
-                    self.output_size = 2*2
-                elif self.enc_model == 'stft2':
-                    self.conv1 = nn.Conv2d(in_channels=self.in_channels, out_channels=96, kernel_size=7, stride=2)
-                    self.output_size = 5*2
-                else:
-                    print('Unsupported feature extractor chosen...')
+                print('Unsupported feature extractor chosen...')
         in_feature = 64 * self.output_size
         self.fc1 = nn.Linear(in_features=64 * self.output_size, out_features=in_feature//2) 
-       
+
         self.classifier = nn.Sequential(
             nn.ReLU(),
             nn.Dropout(inplace=True),
